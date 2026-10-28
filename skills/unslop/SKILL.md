@@ -48,7 +48,14 @@ The full rulebook, with the reason for each rule and how it is checked, is in [r
 
 ## Optional: a before/after film
 
-If the user wants to show the work (a tweet, a PR, a case study), `assets/before-after.html` is a complete, dependency-free reference that animates a vibecoded dashboard through the five passes. How it works:
+If the user wants to show the work (a tweet, a PR, a case study), start from the demo closest to their UI. Each is a complete, dependency-free file that animates a vibecoded UI through the five passes and ends at 0 audit issues:
+
+- `assets/before-after.html`: an app dashboard (sidebar, stat cards, charts, table).
+- `assets/examples/pricing.html`: a marketing page in a browser frame (nav, hero, plan cards, comparison table).
+- `assets/examples/mobile.html`: two phone screens side by side (balance card, budgets, transaction list, tab bar).
+- `assets/examples/chat.html`: an AI chat app (conversation list, messages, a rendered data answer, composer).
+
+How they work:
 
 - Each pass is a cumulative class on the app root (`s-space`, `s-color`, `s-icons`, `s-type`, `s-data`). Slop values are inline custom properties; clean values are `.s-*` overrides; CSS transitions do the motion.
 - Colours are `@property`-registered custom properties, so the whole theme interpolates from neon to calm.
@@ -57,4 +64,4 @@ If the user wants to show the work (a tweet, a PR, a case study), `assets/before
 - A camera (`translate` + `scale`) frames each pass; a small timeline runs the events.
 - URL options: `?stage=N` starts at pass N, `&hold` stops at the end of it, `&embed` hides captions. Keys: space pauses, arrows step, `r` restarts.
 
-To adapt it, copy the file, replace the markup with the user's UI, put their current values in as slop and their unslopped values as stage overrides, and update the `MEAS` list to the gaps you fixed. To record it, use a Playwright CDP screencast (`Page.startScreencast`) and encode the frames with ffmpeg.
+To adapt one, copy the file, set `W` and `H` to the canvas size, replace the markup with the user's UI, put their current values in as slop and their unslopped values as stage overrides, and update the `MEAS` list to the gaps you fixed. To record it, use a Playwright CDP screencast (`Page.startScreencast`) and encode the frames with ffmpeg.

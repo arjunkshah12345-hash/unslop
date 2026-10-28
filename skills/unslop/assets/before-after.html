@@ -441,6 +441,7 @@
 <div id="curtain"></div>
 
 <script>
+const W = 1400, H = 940;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const app = $('#app'), stage = $('#stage'), cam = $('#camera'), overlay = $('#overlay');
@@ -548,7 +549,7 @@ function showMeasures(on) {
 
 /* ---------- camera ---------- */
 function setCamera(c, snap) {
-  const fit = Math.min(innerWidth / 1400, innerHeight / 940);
+  const fit = Math.min(innerWidth / W, innerHeight / H);
   const S = fit * c.z;
   cam.classList.toggle('snap', !!snap);
   cam.style.transform = `translate(${innerWidth / 2 - c.x * S}px, ${innerHeight / 2 - c.y * S}px) scale(${S})`;
