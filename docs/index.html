@@ -69,7 +69,12 @@
   .links { display: flex; align-items: center; gap: var(--s-6); font-size: 14px; color: var(--muted); }
   .links a { display: inline-flex; align-items: center; gap: var(--s-2); }
 
-  .stage { margin-top: var(--s-12); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: #e9e7e1;
+  .demos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-top: var(--s-12); }
+  .demo-tab { height: 32px; padding: 0 var(--s-3); border: 1px solid var(--line); border-radius: var(--r-md); background: transparent; color: var(--muted);
+    font: 500 14px Geist, sans-serif; cursor: pointer; }
+  .demo-tab:hover { color: var(--fg); }
+  .demo-tab[aria-pressed="true"] { background: var(--surface); color: var(--fg); border-color: var(--muted); }
+  .stage { margin-top: var(--s-4); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: #e9e7e1;
     box-shadow: 0 32px 64px -32px rgba(40, 30, 10, .24); }
   .stage iframe { display: block; width: 100%; aspect-ratio: 16 / 10; border: 0; }
   .caption { display: flex; justify-content: space-between; gap: var(--s-4); margin-top: var(--s-3); font-size: 14px; color: var(--muted); }
@@ -250,18 +255,24 @@
       </div>
     </div>
 
+    <div class="demos" role="group" aria-label="Choose a demo">
+      <button class="demo-tab" type="button" aria-pressed="true" data-src="demo/?embed" data-cap="Shipyard, a made-up deploy dashboard, goes through the five passes.">Dashboard</button>
+      <button class="demo-tab" type="button" aria-pressed="false" data-src="demo/pricing.html?embed" data-cap="Quill, a made-up writing tool, gets an honest pricing page.">Pricing page</button>
+      <button class="demo-tab" type="button" aria-pressed="false" data-src="demo/mobile.html?embed" data-cap="Penny, a made-up banking app, two screens at once.">Banking app</button>
+      <button class="demo-tab" type="button" aria-pressed="false" data-src="demo/chat.html?embed" data-cap="Orbit, a made-up AI chat app, down to the answer it renders.">AI chat</button>
+    </div>
     <div class="stage">
-      <iframe src="demo/?embed" title="Animated demo: a vibecoded dashboard is unslopped in five passes" data-unslop-ignore></iframe>
+      <iframe id="demo" src="demo/?embed" title="Animated demo: a vibecoded UI is unslopped in five passes" data-unslop-ignore></iframe>
     </div>
     <div class="caption">
-      <span>Live, not a video. Shipyard, a made-up deploy dashboard, goes through the five passes.</span>
+      <span>Live, not a video. <span id="demo-cap">Shipyard, a made-up deploy dashboard, goes through the five passes.</span></span>
       <span>Click it, then <kbd>space</kbd> to pause and <kbd>←</kbd> <kbd>→</kbd> to step.</span>
     </div>
   </div>
 
   <div class="wrap">
     <div class="proof">
-      <div><b>106 → 0</b><span>audit errors on the demo dashboard</span></div>
+      <div><b>398 → 0</b><span>audit errors across the four demos</span></div>
       <div><b>5 passes</b><span>always in the same order</span></div>
       <div><b>17 checks</b><span>automated, the rest by eye</span></div>
     </div>
@@ -458,7 +469,7 @@ Clean. Nothing measurable left to unslop.</pre>
     <div class="wrap">
       <div class="head">
         <h2>Install</h2>
-        <p>A plain folder: <code>SKILL.md</code>, the rulebook, the audit and the demo. It works with Claude Code and any agent that reads skills.</p>
+        <p>A plain folder: <code>SKILL.md</code>, the rulebook, the audit and four demos to use as film templates. It works with Claude Code and any agent that reads skills.</p>
       </div>
       <div class="ways">
         <div class="way">
@@ -494,6 +505,12 @@ ln -s "$PWD/unslop/skills/unslop" ~/.claude/skills/unslop</pre>
   // 90 days of uptime: two degraded days, one outage
   const ticks = document.getElementById('ticks');
   for (let i = 0; i < 45; i++) { const t = document.createElement('i'); if (i === 11 || i === 31) t.className = 'w'; if (i === 22) t.className = 'd'; ticks.append(t); }
+
+  const frame = document.getElementById('demo'), cap = document.getElementById('demo-cap'), tabs = document.querySelectorAll('.demo-tab');
+  tabs.forEach(b => b.addEventListener('click', () => {
+    tabs.forEach(t => t.setAttribute('aria-pressed', t === b));
+    frame.src = b.dataset.src; cap.textContent = b.dataset.cap;
+  }));
 
   document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
     await navigator.clipboard.writeText(document.querySelector(b.dataset.copy).textContent);

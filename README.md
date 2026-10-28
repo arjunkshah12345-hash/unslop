@@ -57,9 +57,18 @@ On the demo dashboard it goes from 106 errors and 76 warnings to 0. The website 
 
 Limitations: contrast is measured against the nearest opaque ancestor background, so text over images or sibling backdrops needs a manual check. Rendered gaps are measured in screen pixels, so CSS transforms scale them.
 
-## The demo
+## The demos
 
-[`skills/unslop/assets/before-after.html`](skills/unslop/assets/before-after.html) is a single HTML file with no dependencies. It animates Shipyard, a made-up deploy dashboard, through the five passes: redlines are measured live from the DOM and snap to the scale, `@property`-registered colour tokens interpolate the theme, emoji become line icons, copy and charts are rewritten. The skill uses it as a template when you ask for a before/after film of your own UI.
+Four single HTML files with no dependencies, each a made-up product animated through the five passes: redlines are measured live from the DOM and snap to the scale, `@property`-registered colour tokens interpolate the theme, emoji become line icons, copy and charts are rewritten. The skill uses the closest one as a template when you ask for a before/after film of your own UI.
+
+| Demo | File | Audit errors, before → after |
+|---|---|---|
+| Shipyard, a deploy dashboard | [`assets/before-after.html`](skills/unslop/assets/before-after.html) | 106 → 0 |
+| Quill, a pricing page | [`assets/examples/pricing.html`](skills/unslop/assets/examples/pricing.html) | 135 → 0 |
+| Penny, a banking app (two phone screens) | [`assets/examples/mobile.html`](skills/unslop/assets/examples/mobile.html) | 84 → 0 |
+| Orbit, an AI chat app | [`assets/examples/chat.html`](skills/unslop/assets/examples/chat.html) | 73 → 0 |
+
+Each one also ends with 0 warnings and 0 info. Switch between them at the top of the [website](https://arjunkshah12345-hash.github.io/unslop/).
 
 URL options: `?stage=N` starts at pass N, `&hold` stops at the end of it, `&embed` hides the captions. Keys: space pauses, arrows step, `r` restarts.
 
@@ -71,11 +80,12 @@ skills/unslop/
   references/rules.md      the rulebook
   scripts/audit.js         the audit (browser)
   scripts/audit-url.mjs    the audit (Node + Playwright)
-  assets/before-after.html the demo and film template
+  assets/before-after.html the dashboard demo and film template
+  assets/examples/         pricing page, banking app and AI chat demos
 docs/                      the website (GitHub Pages)
 ```
 
-`npm run sync` copies the audit and the demo into `docs/` after you change them.
+`npm run sync` copies the audit and the demos into `docs/` after you change them.
 
 ## Credit
 

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "audit": "node skills/unslop/scripts/audit-url.mjs",
-    "sync": "cp skills/unslop/scripts/audit.js docs/audit.js && cp skills/unslop/assets/before-after.html docs/demo/index.html"
+    "sync": "cp skills/unslop/scripts/audit.js docs/audit.js && cp skills/unslop/assets/before-after.html docs/demo/index.html && cp skills/unslop/assets/examples/*.html docs/demo/"
   },
   "devDependencies": {
     "playwright": "^1.64.1"
