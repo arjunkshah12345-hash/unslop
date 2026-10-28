@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>unslop: an agent skill for vibecoded UIs</title>
+<meta name="description" content="An agent skill that measures a vibecoded UI, fixes spacing, surfaces, icons, type and data in five passes, and proves it with an audit.">
+<meta property="og:title" content="unslop">
+<meta property="og:description" content="Measure, then fix spacing, surfaces, icons, type and data. An agent skill with an audit that proves it.">
+<meta property="og:image" content="https://arjunkshah12345-hash.github.io/unslop/media/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2317161a'/%3E%3Cpath d='M10 9v14M22 9v14M10 16h12' stroke='%23fbfaf7' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px; --s-24: 96px;
+    --r-sm: 6px; --r-md: 8px; --r-lg: 12px;
+    --bg: #f7f6f2; --surface: #ffffff; --sunk: #efede7; --line: #e2dfd7; --muted: #67635c; --fg: #17161a;
+    --accent: #2456e8;
+    --ok: #2f8f57; --warn: #c08a1e; --bad: #c2412d;
+    --mono: 'Geist Mono', ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16px/1.5 Geist, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  a { color: inherit; text-decoration-color: var(--line); text-underline-offset: 4px; }
+  a:hover { text-decoration-color: currentColor; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+  code, pre, kbd { font-family: var(--mono); }
+  svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 var(--s-6); }
+
+  /* header */
+  .top { border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: var(--s-6); height: 64px; }
+  .mark { display: flex; align-items: center; gap: var(--s-2); font-weight: 600; text-decoration: none; }
+  .mark svg { width: 24px; height: 24px; }
+  .top nav { display: flex; align-items: center; gap: var(--s-6); margin-left: auto; font-size: 14px; color: var(--muted); }
+  .top nav a { text-decoration: none; }
+  .top nav a:hover { color: var(--fg); }
+  .gh { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--fg); }
+
+  /* hero */
+  .hero { padding-top: var(--s-24); padding-bottom: var(--s-16); }
+  .hero-text { position: relative; }
+  h1 { margin: 0; max-width: 880px; font-size: 56px; line-height: 1.04; font-weight: 600; letter-spacing: -.035em; }
+  .redline { position: absolute; left: -64px; top: -32px; display: flex; align-items: center; gap: var(--s-2); color: var(--accent); }
+  .redline i { display: block; width: 1px; height: 32px; background: currentColor; position: relative; }
+  .redline i::before, .redline i::after { content: ''; position: absolute; left: -4px; width: 9px; height: 1px; background: currentColor; }
+  .redline i::before { top: 0; } .redline i::after { bottom: 0; }
+  .redline span { font: 500 12px var(--mono); }
+  .hero-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); gap: var(--s-12); align-items: end; margin-top: var(--s-8); }
+  .lede { margin: 0; max-width: 560px; font-size: 20px; line-height: 1.5; color: var(--muted); }
+  .lede b { color: var(--fg); font-weight: 500; }
+  .install { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
+  .cmd { display: flex; align-items: center; gap: var(--s-3); height: 48px; padding: 0 var(--s-2) 0 var(--s-4); border: 1px solid var(--line);
+    border-radius: var(--r-md); background: var(--surface); font: 400 14px var(--mono); }
+  .cmd .p { color: var(--muted); }
+  .cmd code { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .copy { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: var(--r-sm);
+    background: transparent; color: var(--muted); cursor: pointer; }
+  .copy:hover { background: var(--sunk); color: var(--fg); }
+  .copy .ok { display: none; color: var(--accent); }
+  .copy.done .ok { display: block; } .copy.done .cp { display: none; }
+  .links { display: flex; align-items: center; gap: var(--s-6); font-size: 14px; color: var(--muted); }
+  .links a { display: inline-flex; align-items: center; gap: var(--s-2); }
+
+  .stage { margin-top: var(--s-12); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: #e9e7e1;
+    box-shadow: 0 32px 64px -32px rgba(40, 30, 10, .24); }
+  .stage iframe { display: block; width: 100%; aspect-ratio: 16 / 10; border: 0; }
+  .caption { display: flex; justify-content: space-between; gap: var(--s-4); margin-top: var(--s-3); font-size: 14px; color: var(--muted); }
+  .caption kbd { font-size: 12px; padding: 0 var(--s-1); border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
+
+  /* proof */
+  .proof { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .proof div { padding: var(--s-8) var(--s-6); }
+  .proof div + div { border-left: 1px solid var(--line); }
+  .proof b { display: block; font-size: 32px; font-weight: 500; letter-spacing: -.03em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .proof span { display: block; margin-top: var(--s-1); font-size: 14px; color: var(--muted); }
+
+  /* sections */
+  section { padding: var(--s-24) 0 0; }
+  .head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-12); align-items: end; margin-bottom: var(--s-12); }
+  h2 { margin: 0; font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -.03em; }
+  .head p { margin: 0; color: var(--muted); }
+
+  /* passes */
+  .passes { display: grid; border-top: 1px solid var(--line); }
+  .pass { display: grid; grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1.1fr) 320px; gap: var(--s-8); padding: var(--s-10) 0; border-bottom: 1px solid var(--line); }
+  .num { font: 400 14px var(--mono); color: var(--muted); padding-top: var(--s-1); }
+  .pass h3 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 600; letter-spacing: -.01em; }
+  .pass .why { margin: var(--s-2) 0 0; color: var(--muted); font-size: 14px; }
+  .rules { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-3); font-size: 14px; }
+  .rules li { display: flex; gap: var(--s-3); }
+  .rules li svg { margin-top: var(--s-1); color: var(--accent); }
+
+  .spec { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); align-self: start; }
+  .spec > div { display: grid; align-content: start; gap: var(--s-3); padding: var(--s-4); min-height: 176px; }
+  .spec > div + div { border-left: 1px solid var(--line); }
+  .spec .lbl { font: 400 12px var(--mono); color: var(--muted); }
+  .spec .slop { background: #1b0f3d; color: #f4ecff; }
+  .spec .slop .lbl { color: #b9a6ee; }
+
+  /* specimen contents: before halves are deliberate slop (data-unslop-ignore) */
+  .bars { display: grid; }
+  .bars i { display: block; height: 12px; border-radius: 2px; background: #6d4bd1; }
+  .bars.clean { gap: var(--s-1); }
+  .bars.clean i { background: var(--sunk); }
+  .gapnote { font: 400 12px var(--mono); }
+  .gapnote.bad { color: #ff8fb4; }
+  .gapnote.good { color: var(--accent); }
+  .btn-slop { justify-self: start; padding: 10px 18px; border-radius: 22px; font-weight: 600; font-size: 14px; color: #fff;
+    background: linear-gradient(90deg, #ff3cac, #7b5cff); box-shadow: 0 0 24px rgba(255, 60, 172, .7); }
+  .btn-clean { justify-self: start; display: inline-flex; align-items: center; height: 32px; padding: 0 var(--s-3); border-radius: var(--r-md); font-size: 14px; font-weight: 500;
+    background: var(--fg); color: var(--bg); }
+  .swatches { display: flex; gap: var(--s-1); }
+  .swatches i { width: 16px; height: 16px; border-radius: var(--r-sm); }
+  .emo { display: flex; gap: var(--s-2); font-size: 16px; }
+  .icons { display: flex; gap: var(--s-3); color: var(--fg); }
+  .say-slop { font-size: 20px; font-weight: 800; color: #5dffb0; text-shadow: 0 0 10px rgba(93, 255, 176, .7); }
+  .say-clean b { display: block; font-size: 20px; font-weight: 500; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .say-clean span { font-size: 13px; color: var(--muted); }
+  .donut { width: 72px; height: 72px; border-radius: 50%; position: relative;
+    background: conic-gradient(#ff3cac 0 30%, #ffd166 0 44%, #5dffb0 0 63%, #4cc9ff 0 82%, #7b5cff 0 94%, rgba(255,255,255,.12) 0);
+    -webkit-mask: radial-gradient(closest-side, transparent 62%, #000 63%); mask: radial-gradient(closest-side, transparent 62%, #000 63%); }
+  .pct { font-weight: 800; font-size: 14px; }
+  .uptime b { font-size: 20px; font-weight: 500; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .ticks { display: flex; align-items: flex-end; gap: 2px; height: 40px; }
+  .ticks i { flex: 1; height: 100%; border-radius: 1px; background: var(--ok); }
+  .ticks i.w { background: var(--warn); } .ticks i.d { background: var(--bad); }
+  .spark { width: 100%; height: 32px; color: var(--fg); }
+
+  /* audit */
+  .audit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--s-12); }
+  .steps { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-6); }
+  .steps h3 { margin: 0 0 var(--s-2); font-size: 16px; font-weight: 600; }
+  .steps p { margin: 0; color: var(--muted); font-size: 14px; }
+  pre.term { margin: 0; padding: var(--s-5); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
+    font-size: 12px; line-height: 1.7; overflow: auto; color: var(--fg); }
+  pre.term .c { color: var(--muted); }
+  pre.term .e { color: var(--bad); }
+  pre.term .w { color: #8a5f12; }
+  .live { display: flex; align-items: center; gap: var(--s-4); margin-top: var(--s-4); flex-wrap: wrap; }
+  .run { display: inline-flex; align-items: center; gap: var(--s-2); height: 40px; padding: 0 var(--s-4); border: 1px solid var(--line); border-radius: var(--r-md);
+    background: var(--surface); color: var(--fg); font: 500 14px Geist, sans-serif; cursor: pointer; }
+  .run:hover { border-color: var(--muted); }
+  .result { font: 400 13px var(--mono); color: var(--muted); }
+  .result.clean { color: var(--ok); }
+
+  table { width: 100%; border-collapse: collapse; margin-top: var(--s-12); font-size: 14px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); padding: 0 var(--s-4) var(--s-3) 0; border-bottom: 1px solid var(--line); }
+  td { padding: var(--s-3) var(--s-4) var(--s-3) 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td code { font-size: 13px; white-space: nowrap; }
+  .sev { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--muted); }
+  .sev i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .sev.error i { background: var(--bad); } .sev.warn i { background: var(--warn); }
+
+  /* install */
+  .ways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-4); }
+  .way { display: grid; align-content: start; gap: var(--s-3); padding: var(--s-6); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+  .way h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .way p { margin: 0; font-size: 14px; color: var(--muted); }
+  .way pre { margin: 0; padding: var(--s-3); border-radius: var(--r-md); background: var(--sunk); font-size: 12px; line-height: 1.6; white-space: pre; overflow-x: auto; }
+  .ask { margin-top: var(--s-8); display: flex; align-items: center; gap: var(--s-3); font-size: 20px; letter-spacing: -.01em; }
+  .ask svg { width: 20px; height: 20px; color: var(--accent); }
+  .ask q { quotes: '“' '”'; }
+
+  footer { margin-top: var(--s-24); border-top: 1px solid var(--line); }
+  footer .wrap { display: flex; justify-content: space-between; gap: var(--s-6); padding-top: var(--s-8); padding-bottom: var(--s-12); font-size: 14px; color: var(--muted); flex-wrap: wrap; }
+  footer p { margin: 0; }
+
+  @media (max-width: 1260px) { .redline { display: none; } }
+  @media (max-width: 1040px) {
+    .pass { grid-template-columns: 48px minmax(0, 1fr); }
+    .pass .rules, .pass .spec { grid-column: 2; }
+    .audit, .head, .hero-row { grid-template-columns: minmax(0, 1fr); }
+    .head { gap: var(--s-4); }
+  }
+  @media (max-width: 720px) {
+    .wrap { padding-left: var(--s-5); padding-right: var(--s-5); }
+    .top nav a:not(.gh) { display: none; }
+    .hero { padding-top: var(--s-16); }
+    h1 { font-size: 40px; }
+    .lede { font-size: 16px; }
+    .proof, .ways { grid-template-columns: minmax(0, 1fr); }
+    .proof div { padding: var(--s-6) 0; }
+    .proof div + div { border-left: 0; border-top: 1px solid var(--line); }
+    .pass { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+    .pass .rules, .pass .spec { grid-column: 1; }
+    .caption { flex-direction: column; gap: var(--s-1); }
+    .rules-table th:nth-child(3), .rules-table td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="./" aria-label="unslop home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#17161a"/><path d="M8 7v10M16 7v10M8 12h8" stroke="#fbfaf7" stroke-width="1.5" stroke-linecap="round"/></svg>
+      unslop
+    </a>
+    <nav>
+      <a href="#passes">Passes</a>
+      <a href="#audit">Audit</a>
+      <a href="#install">Install</a>
+      <a class="gh" href="https://github.com/arjunkshah12345-hash/unslop">
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div class="hero-text">
+      <h1>Unslop the vibecoded UI.</h1>
+      <div class="hero-row">
+        <div class="redline" aria-hidden="true"><i></i><span>32 ✓</span></div>
+        <p class="lede">An agent skill that <b>measures before it touches anything</b>, fixes spacing, surfaces, icons, type and data in five passes, and stops when its own audit comes back clean.</p>
+        <div class="install">
+          <div class="cmd"><span class="p">$</span><code id="cmd">npx skills add arjunkshah12345-hash/unslop</code>
+            <button class="copy" type="button" aria-label="Copy install command" data-copy="#cmd">
+              <svg class="i cp"><use href="#i-copy"/></svg><svg class="i ok"><use href="#i-check"/></svg>
+            </button>
+          </div>
+          <div class="links">
+            <a href="https://github.com/arjunkshah12345-hash/unslop">Source on GitHub <svg class="i"><use href="#i-arrow"/></svg></a>
+            <a href="https://github.com/arjunkshah12345-hash/unslop/blob/main/skills/unslop/references/rules.md">Read the rules <svg class="i"><use href="#i-arrow"/></svg></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <iframe src="demo/?embed" title="Animated demo: a vibecoded dashboard is unslopped in five passes" data-unslop-ignore></iframe>
+    </div>
+    <div class="caption">
+      <span>Live, not a video. Shipyard, a made-up deploy dashboard, goes through the five passes.</span>
+      <span>Click it, then <kbd>space</kbd> to pause and <kbd>←</kbd> <kbd>→</kbd> to step.</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="proof">
+      <div><b>106 → 0</b><span>audit errors on the demo dashboard</span></div>
+      <div><b>5 passes</b><span>always in the same order</span></div>
+      <div><b>17 checks</b><span>automated, the rest by eye</span></div>
+    </div>
+  </div>
+
+  <section id="passes">
+    <div class="wrap">
+      <div class="head">
+        <h2>Five passes, in order</h2>
+        <p>Spacing first, because it is structural and hard to see once colour changes. Data last, because it depends on every type and colour decision before it.</p>
+      </div>
+
+      <div class="passes">
+        <article class="pass">
+          <div class="num">01</div>
+          <div><h3>Spacing: measure, then snap</h3><p class="why">Guessed spacing is almost consistent. Nobody sees 3px; everybody feels it.</p></div>
+          <ul class="rules">
+            <li><svg class="i"><use href="#i-check"/></svg><span>Measure rendered gaps, not the CSS you think applies.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Every value from one scale: 4, 8, 12, 16, 24, 32, 48.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Repeated siblings sit at identical gaps. Use <code>gap</code>, not margins.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>At most four corner radii.</span></li>
+          </ul>
+          <div class="spec">
+            <div class="slop" data-unslop-ignore>
+              <span class="lbl">Before</span>
+              <div class="bars"><i></i><i style="margin-top:9px"></i><i style="margin-top:3px"></i><i style="margin-top:14px"></i><i style="margin-top:6px"></i></div>
+              <span class="gapnote bad">9 · 3 · 14 · 6</span>
+            </div>
+            <div>
+              <span class="lbl">After</span>
+              <div class="bars clean"><i></i><i></i><i></i><i></i><i></i></div>
+              <span class="gapnote good">4 · 4 · 4 · 4 ✓</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="pass">
+          <div class="num">02</div>
+          <div><h3>Surfaces: calm the colour</h3><p class="why">When everything glows, nothing is important.</p></div>
+          <ul class="rules">
+            <li><svg class="i"><use href="#i-check"/></svg><span>One neutral ramp and one accent, for the one primary action.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>No gradient chrome, no gradient text, no glow.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Status colours only mean status.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Muted text still clears 4.5:1.</span></li>
+          </ul>
+          <div class="spec">
+            <div class="slop" data-unslop-ignore>
+              <span class="lbl">Before</span>
+              <span class="btn-slop">Deploy now</span>
+              <div class="swatches"><i style="background:#ff3cac"></i><i style="background:#7b5cff"></i><i style="background:#4cc9ff"></i><i style="background:#5dffb0"></i><i style="background:#ffd166"></i></div>
+            </div>
+            <div>
+              <span class="lbl">After</span>
+              <span class="btn-clean">Deploy</span>
+              <div class="swatches"><i style="background:#f7f6f2;box-shadow:inset 0 0 0 1px #e2dfd7"></i><i style="background:#e2dfd7"></i><i style="background:#67635c"></i><i style="background:#17161a"></i><i style="background:#2456e8"></i></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="pass">
+          <div class="num">03</div>
+          <div><h3>Icons: real icons, not emoji</h3><p class="why">Emoji change per platform, ignore your colours and read as a toy.</p></div>
+          <ul class="rules">
+            <li><svg class="i"><use href="#i-check"/></svg><span>No emoji in nav, labels, buttons or status.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>One icon set, one 1.5px stroke, <code>currentColor</code>.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Status is a dot plus a word.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Delete icons that repeat their label.</span></li>
+          </ul>
+          <div class="spec">
+            <div class="slop" data-unslop-ignore>
+              <span class="lbl">Before</span>
+              <div class="emo"><span>🏠</span><span>🚀</span><span>📁</span><span>🌐</span><span>⚙️</span></div>
+            </div>
+            <div>
+              <span class="lbl">After</span>
+              <div class="icons"><svg class="i"><use href="#i-home"/></svg><svg class="i"><use href="#i-upload"/></svg><svg class="i"><use href="#i-folder"/></svg><svg class="i"><use href="#i-globe"/></svg><svg class="i"><use href="#i-sliders"/></svg></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="pass">
+          <div class="num">04</div>
+          <div><h3>Type: honest type</h3><p class="why">Slop copy performs excitement. Honest type says what the thing is.</p></div>
+          <ul class="rules">
+            <li><svg class="i"><use href="#i-check"/></svg><span>Names, not hype. No exclamation marks.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Sentence case, two or three weights, at most eight sizes.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Numbers get precision, units, context and tabular figures.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Monospace for hashes, branches and IDs.</span></li>
+          </ul>
+          <div class="spec">
+            <div class="slop" data-unslop-ignore>
+              <span class="lbl">Before</span>
+              <span class="say-slop">42s</span>
+              <span class="say-slop" style="font-size:14px">blazing fast!! ⚡⚡</span>
+            </div>
+            <div class="say-clean">
+              <span class="lbl">After</span>
+              <b>42.1s</b>
+              <span>−3.4s this week</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="pass">
+          <div class="num">05</div>
+          <div><h3>Data: data that reads</h3><p class="why">A spinning five-slice donut looks like data and says nothing.</p></div>
+          <ul class="rules">
+            <li><svg class="i"><use href="#i-check"/></svg><span>Chart the question: trend, history, or part of a whole.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Animate in once, then hold still.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Every number gets a range, a comparison or a target.</span></li>
+            <li><svg class="i"><use href="#i-check"/></svg><span>Label directly; legends only when labels collide.</span></li>
+          </ul>
+          <div class="spec">
+            <div class="slop" data-unslop-ignore>
+              <span class="lbl">Before</span>
+              <div class="donut"></div>
+              <span class="pct">94%!!</span>
+            </div>
+            <div class="uptime">
+              <span class="lbl">After</span>
+              <b>99.982%</b>
+              <div class="ticks" id="ticks" aria-label="90 days of uptime, 2 degraded, 1 outage"></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="audit">
+    <div class="wrap">
+      <div class="head">
+        <h2>The audit</h2>
+        <p>One read-only script finds the measurable tells: off-grid spacing, uneven siblings, emoji, glow, gradient text, hype copy, failing contrast, looping charts. The skill runs it before the first pass and after every pass.</p>
+      </div>
+      <div class="audit">
+        <ol class="steps">
+          <li><h3>From Node</h3><p>Loads the page in headless Chromium and exits 1 while errors remain, so it can gate CI.</p></li>
+          <li><h3>From any agent</h3><p>Evaluate <code>audit.js</code> with whatever browser tool the agent has. The result is the report.</p></li>
+          <li><h3>From DevTools</h3><p>Paste the file into the console for a table of every issue.</p></li>
+          <li>
+            <h3>On this page</h3>
+            <p>This site was built with the skill. Check it yourself.</p>
+            <div class="live">
+              <button class="run" id="run" type="button"><svg class="i"><use href="#i-play"/></svg>Run the audit here</button>
+              <span class="result" id="result" aria-live="polite"></span>
+            </div>
+          </li>
+        </ol>
+<pre class="term"><span class="c">$ node scripts/audit-url.mjs demo/?stage=1&amp;hold</span>
+
+<span class="e">106 errors</span> · <span class="w">76 warnings</span> · 175 visible elements
+
+icons/emoji  (60)
+  <span class="e">error</span> div#brand &gt; span.pro · ✨ in "PRO ✨"
+  <span class="e">error</span> div#n1 &gt; span.ico &gt; span.e · 🏠 in "🏠"
+spacing/off-grid  (37)
+  <span class="e">error</span> div#navlabel · margin-top 31px, margin-bottom 10px
+  <span class="e">error</span> div#search · margin-top 22px
+surface/colored-glow  (31)
+  <span class="w">warn</span>  div#n1 · rgba(255, 70, 200, 0.7) blur 28px
+type/hype  (5)
+  <span class="w">warn</span>  p#sub · crushing in "Your deploys are absolutely CRUSHING…"
+spacing/uneven-siblings  (3)
+  <span class="e">error</span> aside#side &gt; nav · vertical gaps 11, 4, 17, 7, 13px
+
+<span class="c">$ node scripts/audit-url.mjs demo/?stage=7&amp;hold</span>
+
+0 errors · 0 warnings · 0 info · 236 visible elements
+Clean. Nothing measurable left to unslop.</pre>
+      </div>
+
+      <table class="rules-table">
+        <thead><tr><th>Check</th><th>Severity</th><th>Catches</th></tr></thead>
+        <tbody>
+          <tr><td><code>spacing/off-grid</code></td><td><span class="sev error"><i></i>Error</span></td><td>Padding, margin or gap outside the 4pt scale</td></tr>
+          <tr><td><code>spacing/uneven-siblings</code></td><td><span class="sev error"><i></i>Error</span></td><td>Repeated items sitting at different rendered gaps</td></tr>
+          <tr><td><code>icons/emoji</code></td><td><span class="sev error"><i></i>Error</span></td><td>Emoji in interface text</td></tr>
+          <tr><td><code>surface/gradient-text</code></td><td><span class="sev error"><i></i>Error</span></td><td>Gradient-filled text</td></tr>
+          <tr><td><code>contrast/text</code></td><td><span class="sev error"><i></i>Error</span></td><td>Text under 4.5:1, or 3:1 for large text</td></tr>
+          <tr><td><code>surface/colored-glow</code>, <code>surface/text-glow</code></td><td><span class="sev warn"><i></i>Warning</span></td><td>Coloured shadows and glowing text</td></tr>
+          <tr><td><code>surface/vivid-gradient</code>, <code>surface/too-many-accents</code></td><td><span class="sev warn"><i></i>Warning</span></td><td>Saturated multi-hue gradients; more than three accent hues</td></tr>
+          <tr><td><code>type/exclamation</code>, <code>type/hype</code></td><td><span class="sev warn"><i></i>Warning</span></td><td>Exclamation marks and hype words in UI copy</td></tr>
+          <tr><td><code>type/too-many-weights</code>, <code>type/too-many-sizes</code></td><td><span class="sev warn"><i></i>Warning</span></td><td>More than three weights or eight sizes</td></tr>
+          <tr><td><code>radius/no-scale</code></td><td><span class="sev warn"><i></i>Warning</span></td><td>More than four corner radii</td></tr>
+          <tr><td><code>motion/infinite</code></td><td><span class="sev warn"><i></i>Warning</span></td><td>Animations that loop forever on content</td></tr>
+          <tr><td><code>surface/glass</code>, <code>type/proportional-figures</code></td><td><span class="sev"><i></i>Info</span></td><td>Backdrop blur; big numbers without tabular figures</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <div class="head">
+        <h2>Install</h2>
+        <p>A plain folder: <code>SKILL.md</code>, the rulebook, the audit and the demo. It works with Claude Code and any agent that reads skills.</p>
+      </div>
+      <div class="ways">
+        <div class="way">
+          <h3>Skills CLI</h3>
+          <p>Installs into every agent it finds.</p>
+          <pre>npx skills add arjunkshah12345-hash/unslop</pre>
+        </div>
+        <div class="way">
+          <h3>Claude Code</h3>
+          <p>Clone it and link the folder.</p>
+          <pre>git clone https://github.com/arjunkshah12345-hash/unslop
+ln -s "$PWD/unslop/skills/unslop" ~/.claude/skills/unslop</pre>
+        </div>
+        <div class="way">
+          <h3>Any other agent</h3>
+          <p>Copy <code>skills/unslop</code> to wherever it loads skills, or point it at <code>SKILL.md</code>.</p>
+          <pre>cp -r unslop/skills/unslop ~/.agents/skills/</pre>
+        </div>
+      </div>
+      <p class="ask"><svg class="i"><use href="#i-chat"/></svg>Then ask: <q>unslop this dashboard</q></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>MIT licensed. Made by <a href="https://github.com/arjunkshah12345-hash">arjunkshah12345-hash</a>.</p>
+    <p>After <a href="https://x.com/heydamir/status/2115063463063998736">Unslopping a vibecoded dashboard</a> by Damir Sokolovsky.</p>
+  </div>
+</footer>
+
+<script>
+  // 90 days of uptime: two degraded days, one outage
+  const ticks = document.getElementById('ticks');
+  for (let i = 0; i < 45; i++) { const t = document.createElement('i'); if (i === 11 || i === 31) t.className = 'w'; if (i === 22) t.className = 'd'; ticks.append(t); }
+
+  document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(document.querySelector(b.dataset.copy).textContent);
+    b.classList.add('done'); setTimeout(() => b.classList.remove('done'), 1600);
+  }));
+
+  const run = document.getElementById('run'), out = document.getElementById('result');
+  run.addEventListener('click', async () => {
+    out.className = 'result'; out.textContent = 'Running…';
+    if (!window.unslopAudit) {
+      window.UNSLOP_OPTIONS = { log: false };
+      await new Promise((ok, fail) => { const s = document.createElement('script'); s.src = 'audit.js'; s.onload = ok; s.onerror = fail; document.head.append(s); });
+    }
+    const r = window.unslopAudit({ log: true });
+    const c = r.counts;
+    out.textContent = `${c.error} errors · ${c.warn} warnings · ${c.info} info across ${r.elements} elements`;
+    if (!c.error && !c.warn) out.className = 'result clean';
+  });
+</script>
+</body>
+</html>

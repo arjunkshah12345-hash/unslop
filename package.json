@@ -1,0 +1,14 @@
+{
+  "name": "unslop",
+  "private": true,
+  "description": "An agent skill that unslops vibecoded UIs, with an audit that proves it.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "audit": "node skills/unslop/scripts/audit-url.mjs",
+    "sync": "cp skills/unslop/scripts/audit.js docs/audit.js && cp skills/unslop/assets/before-after.html docs/demo/index.html"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}
